@@ -31,7 +31,8 @@ deps := $(wildcard deps/*/ebin)
 dialyzer/erlang.plt:
 	@mkdir -p dialyzer
 	@dialyzer --build_plt --output_plt dialyzer/erlang.plt \
-	-o dialyzer/erlang.log --apps kernel stdlib erts inets public_key crypto; \
+	-o dialyzer/erlang.log --apps kernel stdlib erts ssl \
+	                              inets public_key crypto; \
 	status=$$? ; if [ $$status -ne 2 ]; then exit $$status; else exit 0; fi
 
 dialyzer/deps.plt:
