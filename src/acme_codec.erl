@@ -47,7 +47,8 @@
 		      unauthorized |
 		      unsupportedContact |
 		      unsupportedIdentifier |
-		      userActionRequired.
+		      userActionRequired |
+		      binary().
 
 -type dir_obj() :: #{newNonce := binary(),
 		     newAccount := binary(),
@@ -237,7 +238,7 @@ acme_error_validator() ->
 		<<"urn:ietf:params:acme:error:", Type/binary>> ->
 		    (yconf:enum(acme_errors()))(Type);
 		_ ->
-		    {url, URL}
+		    URL
 	    end
     end.
 
