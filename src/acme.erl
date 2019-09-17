@@ -68,7 +68,6 @@
 -type challenge_fun() :: fun((challenge_data()) -> any()).
 -type challenge_type() :: 'http-01'.
 -type debug_fun() :: fun((string(), list()) -> _).
--type callback_fun() :: fun((state()) -> acme_return()).
 -type http_req_fun() :: fun((state()) -> {http_method(), _}).
 -type option() :: {timeout, pos_integer()} |
 		  {debug_fun, debug_fun()}.
@@ -251,14 +250,14 @@ request_directory(State) ->
 	    Err
     end.
 
--spec request_new_nonce(state(), callback_fun()) -> acme_return().
-request_new_nonce(State, Next) ->
+-spec request_new_nonce(state()) -> acme_return().
+request_new_nonce(State) ->
     Req = fun(S) ->
 		  {head, {S#state.new_nonce_url, []}}
 	  end,
     case http_request(State, Req) of
 	{ok, Reply, State1} ->
-	    handle_nonce_response(Reply, Next, State1);
+	    handle_nonce_response(Reply, State1);
 	Err ->
 	    Err
     end.
@@ -448,21 +447,20 @@ handle_directory_response({_, _Hdrs, JSON}, State) ->
 				 new_acc_url = binary_to_list(AccURL),
 				 new_order_url = binary_to_list(OrderURL),
 				 revoke_url = binary_to_list(RevokeURL)},
-	    Next = case State#state.command of
-		       issue -> fun request_new_account/1;
-		       revoke -> fun revoke_certificate/1
-		   end,
-	    request_new_nonce(State1, Next);
+	    request_new_nonce(State1);
 	Err ->
 	    mk_codec_error(Err)
     end.
 
--spec handle_nonce_response(http_json(), callback_fun(), state()) -> acme_return().
-handle_nonce_response({_, Hdrs, _}, Fun, State) ->
+-spec handle_nonce_response(http_json(), state()) -> acme_return().
+handle_nonce_response({_, Hdrs, _}, State) ->
     case lists:keyfind("replay-nonce", 1, Hdrs) of
 	{_, Nonce} ->
 	    State1 = State#state{nonce = iolist_to_binary(Nonce)},
-	    Fun(State1);
+	    case State1#state.command of
+		issue -> request_new_account(State1);
+		revoke -> revoke_certificate(State1)
+	    end;
 	false ->
 	    mk_http_error({missing_header, 'Replay-Nonce'})
     end.
@@ -618,7 +616,7 @@ http_request(State, ReqFun, RetryTimeout) ->
 	    end
     end.
 
--spec http_retry(state(), http_req_fun(), non_neg_integer(), _) ->
+-spec http_retry(state(), http_req_fun(), non_neg_integer(), error_reason()) ->
 			{ok, http_json() | http_bin(), state()} | error_return().
 http_retry(State, ReqFun, RetryTimeout, Reason) ->
     case {need_retry(Reason), get_timeout(State)} of
@@ -626,10 +624,11 @@ http_retry(State, ReqFun, RetryTimeout, Reason) ->
 	    timer:sleep(RetryTimeout),
 	    http_request(State, ReqFun, RetryTimeout*2);
 	_ ->
-	    mk_http_error(Reason)
+	    mk_error(Reason)
     end.
 
-need_retry({failed_connect, Reason}) ->
+-spec need_retry(error_reason()) -> boolean().
+need_retry({http_error, {failed_connect, Reason}}) ->
     case Reason of
 	ehostdown -> true;
 	ehostunreach -> true;
@@ -642,9 +641,14 @@ need_retry({failed_connect, Reason}) ->
 	econnreset -> true;
 	_ -> false
     end;
-need_retry({send_failed, _}) -> true;
-need_retry(socket_closed_remotely) -> true;
-need_retry({code, Code, _}) when Code >= 500, Code < 600 -> true;
+need_retry({http_error, socket_closed_remotely}) -> true;
+need_retry({http_error, {code, Code, _}}) when Code >= 500, Code < 600 -> true;
+need_retry({problem_report, #{type := Type}})
+  when Type == badNonce; Type == serverInternal ->
+    true;
+need_retry({problem_report, #{status := Code}})
+  when Code >= 500, Code < 600 ->
+    true;
 need_retry(_) -> false.
 
 %%%===================================================================
@@ -664,11 +668,9 @@ handle_http_response(ReqFun, {{_, Code, Slogan}, Hdrs, Body}, State, RetryTimeou
 		    {ok, {Code, Hdrs, JSON}, State1};
 		JSON when Type == "application/problem+json" ->
 		    case acme_codec:decode_err_obj(JSON) of
-			{ok, #{type := badNonce}} ->
-			    request_new_nonce(
-			      State, fun(S) -> http_request(S, ReqFun) end);
 			{ok, ErrObj} ->
-			    mk_error({problem_report, ErrObj});
+			    http_retry(State1, ReqFun, RetryTimeout,
+				       {problem_report, ErrObj});
 			Err ->
 			    mk_codec_error(Err)
 		    end
@@ -690,29 +692,31 @@ handle_http_response(ReqFun, {{_, Code, Slogan}, Hdrs, Body}, State, RetryTimeou
 		    mk_http_error({missing_header, 'Content-Type'})
 	    end;
 	_ when Code >= 500, Code < 600 ->
-	    http_retry(State, ReqFun, RetryTimeout, {code, Code, Slogan});
+	    http_retry(State, ReqFun, RetryTimeout,
+		       prep_http_error({code, Code, Slogan}));
 	_ ->
 	    mk_http_error({code, Code, Slogan})
     end;
 handle_http_response(ReqFun, {error, Reason}, State, RetryTimeout) ->
     http_retry(State, ReqFun, RetryTimeout, prep_http_error(Reason));
 handle_http_response(ReqFun, Term, State, RetryTimeout) ->
-    http_retry(State, ReqFun, RetryTimeout, Term).
+    http_retry(State, ReqFun, RetryTimeout, prep_http_error(Term)).
 
 prep_http_error({failed_connect, List} = Reason) when is_list(List) ->
-    case lists:keyfind(inet, 1, List) of
-	{_, _, Why} ->
-	    {failed_connect,
-	     case Why of
-		 timeout -> etimedout;
-		 closed -> econnrefused;
-		 _ -> Why
-	     end};
-	_ ->
-	    Reason
-    end;
+    {http_error,
+     case lists:keyfind(inet, 1, List) of
+	 {_, _, Why} ->
+	     {failed_connect,
+	      case Why of
+		  timeout -> etimedout;
+		  closed -> econnrefused;
+		  _ -> Why
+	      end};
+	 _ ->
+	     Reason
+     end};
 prep_http_error(Reason) ->
-    Reason.
+    {http_error, Reason}.
 
 -spec update_nonce([http_header()], state()) -> state().
 update_nonce(Hdrs, State) ->
