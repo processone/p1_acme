@@ -153,13 +153,11 @@ format_error({http_error, Err}) ->
     "HTTP error: " ++
 	case Err of
 	    {code, Code, ""} ->
-		integer_to_list(Code);
+		"unexpected status code: " ++ integer_to_list(Code);
 	    {code, Code, Slogan} ->
 		format("~s (~B)", [Slogan, Code]);
-	    {failed_connect, Reason} when is_atom(Reason) ->
-		format_inet_error(Reason);
-	    socket_closed_remotely ->
-		format_inet_error(econnreset);
+	    {inet, Reason} ->
+		"transport failure: " ++ format_inet_error(Reason);
 	    {could_not_parse_as_http, _} ->
 		"received malformed HTTP packet";
 	    {missing_header, Header} ->
@@ -628,7 +626,7 @@ http_retry(State, ReqFun, RetryTimeout, Reason) ->
     end.
 
 -spec need_retry(error_reason()) -> boolean().
-need_retry({http_error, {failed_connect, Reason}}) ->
+need_retry({http_error, {inet, Reason}}) ->
     case Reason of
 	ehostdown -> true;
 	ehostunreach -> true;
@@ -641,7 +639,6 @@ need_retry({http_error, {failed_connect, Reason}}) ->
 	econnreset -> true;
 	_ -> false
     end;
-need_retry({http_error, socket_closed_remotely}) -> true;
 need_retry({http_error, {code, Code, _}}) when Code >= 500, Code < 600 -> true;
 need_retry({problem_report, #{type := Type}})
   when Type == badNonce; Type == serverInternal ->
@@ -705,16 +702,18 @@ handle_http_response(ReqFun, Term, State, RetryTimeout) ->
 prep_http_error({failed_connect, List} = Reason) when is_list(List) ->
     {http_error,
      case lists:keyfind(inet, 1, List) of
-	 {_, _, Why} ->
-	     {failed_connect,
+	 {_, _, Why} when is_atom(Why) ->
+	     {inet,
 	      case Why of
 		  timeout -> etimedout;
-		  closed -> econnrefused;
+		  closed -> econnreset;
 		  _ -> Why
 	      end};
 	 _ ->
 	     Reason
      end};
+prep_http_error(socket_closed_remotely) ->
+    {http_error, {inet, econnreset}};
 prep_http_error(Reason) ->
     {http_error, Reason}.
 
