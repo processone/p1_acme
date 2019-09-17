@@ -87,7 +87,7 @@
 			   name_not_permitted | missing_basic_constraint |
 			   invalid_key_usage | selfsigned_peer | unknown_ca |
 			   empty_chain | key_mismatch.
--type error_reason() :: {codec_error, yconf:error_reason(), yconf:ctx()} |
+-type error_reason() :: {codec_error, yconf:error_reason(), yconf:ctx(), map()} |
 			{http_error, term()} |
 			{challenge_failed, binary(), undefined | acme_codec:err_obj()} |
 			{unsupported_challenges, binary(), [string()]} |
@@ -147,8 +147,11 @@ revoke(DirURL, Cert, CertKey, Opts) ->
     request_directory(State).
 
 -spec format_error(error_reason()) -> string().
-format_error({codec_error, Reason, Ctx}) ->
-    format("Invalid JSON object: ~s", [yconf:format_error(Reason, Ctx)]);
+format_error({codec_error, Reason, Ctx, JSON}) ->
+    format("Codec error: Failed to validate JSON object:~n"
+	   "** Reason = ~s~n"
+	   "** JSON = ~s",
+	   [yconf:format_error(Reason, Ctx), encode_json(JSON)]);
 format_error({http_error, Err}) ->
     "HTTP error: " ++
 	case Err of
@@ -180,7 +183,7 @@ format_error({bad_pem, URL}) ->
 format_error({bad_der, URL}) ->
     format("Failed to decode ASN.1 DER certificate in the chain obtained from ~s", [URL]);
 format_error({bad_json, Data}) ->
-    format("Failed to decode JSON object: ~s", [Data]);
+    format("Failed to decode JSON: ~s", [Data]);
 format_error({bad_cert, Reason}) ->
     format_bad_cert_error(Reason);
 format_error({problem_report, ErrObj}) ->
@@ -447,7 +450,7 @@ handle_directory_response({_, _Hdrs, JSON}, State) ->
 				 revoke_url = binary_to_list(RevokeURL)},
 	    request_new_nonce(State1);
 	Err ->
-	    mk_codec_error(Err)
+	    mk_codec_error(Err, JSON)
     end.
 
 -spec handle_nonce_response(http_json(), state()) -> acme_return().
@@ -475,7 +478,7 @@ handle_account_response({_, Hdrs, JSON}, State) ->
 		    State1 = State#state{account = {AccKey, AccURL}},
 		    request_new_order(State1);
 		Err ->
-		    mk_codec_error(Err)
+		    mk_codec_error(Err, JSON)
 	    end
     end.
 
@@ -502,7 +505,7 @@ handle_order_response({_, Hdrs, JSON}, State) ->
 			    Err
 		    end;
 		Err ->
-		    mk_codec_error(Err)
+		    mk_codec_error(Err, JSON)
 	    end
     end.
 
@@ -524,7 +527,7 @@ handle_domain_auth_response({_, _Hdrs, JSON}, State) ->
 		    mk_error({unsupported_challenges, D, Types})
 	    end;
 	Err ->
-	    mk_codec_error(Err)
+	    mk_codec_error(Err, JSON)
     end.
 
 -spec handle_poll_response(http_json(), state(), non_neg_integer()) -> issue_return().
@@ -538,7 +541,7 @@ handle_poll_response({_, _, JSON} = Response, State, Timeout) ->
 	{ok, _} ->
 	    handle_order_response(Response, State);
 	Err ->
-	    mk_codec_error(Err)
+	    mk_codec_error(Err, JSON)
     end.
 
 -spec handle_pem_file_response(http_bin(), string(), state()) -> issue_return().
@@ -669,7 +672,7 @@ handle_http_response(ReqFun, {{_, Code, Slogan}, Hdrs, Body}, State, RetryTimeou
 			    http_retry(State1, ReqFun, RetryTimeout,
 				       {problem_report, ErrObj});
 			Err ->
-			    mk_codec_error(Err)
+			    mk_codec_error(Err, JSON)
 		    end
 	    catch _:_ ->
 		    mk_error({bad_json, Body})
@@ -910,9 +913,9 @@ encode_json(JSON) ->
 mk_http_error(Reason) ->
     mk_error({http_error, Reason}).
 
--spec mk_codec_error(yconf:error_return()) -> error_return().
-mk_codec_error({error, Reason, Ctx}) ->
-    mk_error({codec_error, Reason, Ctx}).
+-spec mk_codec_error(yconf:error_return(), map()) -> error_return().
+mk_codec_error({error, Reason, Ctx}, JSON) ->
+    mk_error({codec_error, Reason, Ctx, JSON}).
 
 -spec mk_error(error_reason()) -> error_return().
 mk_error(Reason) ->
