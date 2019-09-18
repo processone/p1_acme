@@ -147,11 +147,10 @@ revoke(DirURL, Cert, CertKey, Opts) ->
     request_directory(State).
 
 -spec format_error(error_reason()) -> string().
-format_error({codec_error, Reason, Ctx, JSON}) ->
-    format("Codec error: Failed to validate JSON object:~n"
-	   "** Reason = ~s~n"
-	   "** JSON = ~s",
-	   [yconf:format_error(Reason, Ctx), encode_json(JSON)]);
+format_error({codec_error, Reason, Ctx, _JSON}) ->
+    format("Codec error: Failed to validate JSON object: ~s "
+	   "(not an ACMEv2 compatible server?)",
+	   [yconf:format_error(Reason, Ctx)]);
 format_error({http_error, Err}) ->
     "HTTP error: " ++
 	case Err of
