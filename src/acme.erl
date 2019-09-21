@@ -559,7 +559,7 @@ handle_pem_file_response({_, _, CertPEM}, URL,
 		[] ->
 		    mk_error({bad_cert, empty_chain});
 		CertChain ->
-		    SortedCertChain = sort_cert_chain(CertChain),
+		    {SortedCertChain, SortedDERs} = sort_cert_chain(CertChain, DERs),
 		    Ret = #{acc_key => AccKey,
 			    cert_key => CertKey,
 			    cert_chain => SortedCertChain},
@@ -568,7 +568,7 @@ handle_pem_file_response({_, _, CertPEM}, URL,
 			       _ ->
 				   Ret#{validation_result =>
 					    validate_cert_chain(
-					      SortedCertChain, DERs, CertKey, CaCerts)}
+					      SortedCertChain, SortedDERs, CertKey, CaCerts)}
 			   end,
 		    {ok, Ret1}
 	    catch _:_ ->
@@ -858,9 +858,13 @@ validate_cert_chain([Cert|_] = Certs, DerCerts, PrivKey, CaCerts) ->
 	    end
     end.
 
--spec sort_cert_chain([cert()]) -> [cert()].
-sort_cert_chain(Certs) ->
-    lists:sort(fun public_key:pkix_is_issuer/2, Certs).
+-spec sort_cert_chain([cert()], [binary()]) -> {[cert()], [binary()]}.
+sort_cert_chain(Certs, DERs) ->
+    lists:unzip(
+      lists:sort(
+	fun({Cert1, _}, {Cert2, _}) ->
+		public_key:pkix_is_issuer(Cert1, Cert2)
+	end, lists:zip(Certs, DERs))).
 
 -spec find_issuer_cert(cert(), [cert()]) -> {ok, cert()} | error.
 find_issuer_cert(Cert, [IssuerCert|IssuerCerts]) ->
