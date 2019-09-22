@@ -38,7 +38,7 @@
 
 -record(state, {command        :: command(),
 		dir_url        :: string(),
-		domains        :: [binary()],
+		domains        :: [domain()],
 		contact        :: [binary()],
 		end_time       :: integer(),
 		challenge_type :: undefined | binary(),
@@ -61,8 +61,9 @@
 -type priv_key() :: public_key:private_key().
 -type pub_key() :: #'RSAPublicKey'{} | #'ECPoint'{}.
 -type cert() :: #'OTPCertificate'{}.
+-type domain() :: string(). %% UTF-8 charlist()
 -type cert_type() :: ec | rsa.
--type challenge_data() :: [#{domain := binary(),
+-type challenge_data() :: [#{domain := domain(),
 			     token := binary(),
 			     key := binary()}].
 -type challenge_fun() :: fun((challenge_data()) -> any()).
@@ -89,12 +90,11 @@
 			   empty_chain | key_mismatch.
 -type error_reason() :: {codec_error, yconf:error_reason(), yconf:ctx(), map()} |
 			{http_error, term()} |
-			{challenge_failed, binary(), undefined | acme_codec:err_obj()} |
-			{unsupported_challenges, binary(), [string()]} |
+			{challenge_failed, domain(), undefined | acme_codec:err_obj()} |
+			{unsupported_challenges, domain(), [string()]} |
 			{bad_pem, string()} |
 			{bad_der, string()} |
 			{bad_json, binary()} |
-			{idna_failed, binary()} |
 			{bad_cert, bad_cert_reason()} |
 			{problem_report, acme_codec:err_obj()}.
 -type error_return() :: {error, error_reason()}.
@@ -121,18 +121,18 @@ start() ->
 stop() ->
     application:stop(acme).
 
--spec issue(binary() | string(), [binary() | string()]) -> issue_return().
+-spec issue(binary() | string(), [domain()]) -> issue_return().
 issue(DirURL, Domains) ->
     issue(DirURL, Domains, generate_key(ec), []).
 
--spec issue(binary() | string(), [binary() | string()],
+-spec issue(binary() | string(), [domain()],
 	    priv_key() | [issue_option()]) -> issue_return().
 issue(DirURL, Domains, Opts) when is_list(Opts) ->
     issue(DirURL, Domains, generate_key(ec), Opts);
 issue(DirURL, Domains, AccKey) ->
     issue(DirURL, Domains, AccKey, []).
 
--spec issue(binary() | string(), [binary() | string()],
+-spec issue(binary() | string(), [domain()],
 	    priv_key(), [issue_option()]) -> issue_return().
 issue(DirURL, Domains, AccKey, Opts) ->
     State = init_state(issue, DirURL, Domains, AccKey, Opts),
@@ -171,13 +171,15 @@ format_error({http_error, Err}) ->
 		format("~p", [Err])
 	end;
 format_error({challenge_failed, Domain, undefined}) ->
-    format("Challenge failed for domain ~s", [Domain]);
+    format("Challenge failed for domain ~s",
+	   [unicode:characters_to_binary(Domain)]);
 format_error({challenge_failed, Domain, ErrObj}) ->
     format("Challenge failed for domain ~s: ~s",
-	   [Domain, format_problem_report(ErrObj)]);
+	   [unicode:characters_to_binary(Domain),
+	    format_problem_report(ErrObj)]);
 format_error({unsupported_challenges, Domain, Types}) ->
     format("ACME server offered unsupported challenges for domain ~s: ~s",
-	   [Domain, string:join(Types, ", ")]);
+	   [unicode:characters_to_binary(Domain), string:join(Types, ", ")]);
 format_error({bad_pem, URL}) ->
     format("Failed to decode PEM certificate chain obtained from ~s", [URL]);
 format_error({bad_der, URL}) ->
@@ -284,7 +286,8 @@ request_new_order(State) ->
     Req = fun(S) ->
 		  Body = #{<<"identifiers">> =>
 			       [#{<<"type">> => <<"dns">>,
-				  <<"value">> => Domain}
+				  <<"value">> =>
+				      list_to_binary(idna:to_ascii(Domain))}
 				|| Domain <- S#state.domains]},
 		  JoseJSON = jose_json(S, Body, S#state.new_order_url),
 		  {post, {S#state.new_order_url, [],
@@ -298,14 +301,14 @@ request_new_order(State) ->
     end.
 
 -spec request_domain_auth(state(), [string()]) ->
-				 {ok, state(), [{binary(), acme_codec:challenge_obj()}]} |
+				 {ok, state(), [{domain(), acme_codec:challenge_obj()}]} |
 				 error_return().
 request_domain_auth(State, AuthURLs) ->
     request_domain_auth(State, AuthURLs, []).
 
 -spec request_domain_auth(state(), [string()],
-			  [{binary(), acme_codec:challenge_obj()}]) ->
-				 {ok, state(), [{binary(), acme_codec:challenge_obj()}]} |
+			  [{domain(), acme_codec:challenge_obj()}]) ->
+				 {ok, state(), [{domain(), acme_codec:challenge_obj()}]} |
 				 error_return().
 request_domain_auth(State, [URL|URLs], Challenges) ->
     Req = fun(S) ->
@@ -326,7 +329,7 @@ request_domain_auth(State, [URL|URLs], Challenges) ->
 request_domain_auth(State, [], Challenges) ->
     {ok, State, Challenges}.
 
--spec request_challenges(state(), [{binary(), acme_codec:challenge_obj()}]) -> issue_return().
+-spec request_challenges(state(), [{domain(), acme_codec:challenge_obj()}]) -> issue_return().
 request_challenges(State, Challenges) ->
     {Pending, _InProgress, _Valid, Invalid} = split_challenges(Challenges),
     case Invalid of
@@ -510,21 +513,22 @@ handle_order_response({_, Hdrs, JSON}, State) ->
     end.
 
 -spec handle_domain_auth_response(http_json(), state()) ->
-					 {ok, {binary(), acme_codec:challenge_obj()}} |
+					 {ok, {domain(), acme_codec:challenge_obj()}} |
 					 error_return().
 handle_domain_auth_response({_, _Hdrs, JSON}, State) ->
     case acme_codec:decode_auth_obj(JSON) of
 	{ok, #{challenges := Challenges,
 	       identifier := #{value := D}}} ->
+	    Domain = idna:to_unicode(binary_to_list(D)),
 	    case lists:dropwhile(
 		   fun(#{type := T}) ->
 			   T /= State#state.challenge_type
 		   end, Challenges) of
-		[Challenge|_] -> {ok, {D, Challenge}};
+		[Challenge|_] -> {ok, {Domain, Challenge}};
 		[] ->
 		    Types = [binary_to_list(maps:get(type, C))
 			     || C <- Challenges],
-		    mk_error({unsupported_challenges, D, Types})
+		    mk_error({unsupported_challenges, Domain, Types})
 	    end;
 	Err ->
 	    mk_codec_error(Err, JSON)
@@ -739,7 +743,7 @@ generate_key(ec) ->
 generate_key(rsa) ->
     public_key:generate_key({rsa, 2048, 65537}).
 
--spec generate_csr([binary(), ...], priv_key()) -> #'CertificationRequest'{}.
+-spec generate_csr([domain(), ...], priv_key()) -> #'CertificationRequest'{}.
 generate_csr([_|_] = Domains, PrivKey) ->
     SignAlgoOID = signature_algorithm(PrivKey),
     PubKey = pubkey_from_privkey(PrivKey),
@@ -747,7 +751,7 @@ generate_csr([_|_] = Domains, PrivKey) ->
     DerParams = der_params(PrivKey),
     DerSAN = public_key:der_encode(
 	       'SubjectAltName',
-	       [{dNSName, idna:to_ascii(binary_to_list(Domain))} || Domain <- Domains]),
+	       [{dNSName, idna:to_ascii(Domain)} || Domain <- Domains]),
     Extns = [#'Extension'{extnID = ?'id-ce-subjectAltName',
 			  critical = false,
 			  extnValue = DerSAN}],
@@ -945,14 +949,14 @@ check_url(S) ->
 	_ -> erlang:error(badarg, [S])
     end.
 
--spec init_state(issue, binary() | string(), [binary() | string()], priv_key(),
+-spec init_state(issue, binary() | string(), [domain()], priv_key(),
 		 [issue_option()]) -> state();
 		(revoke, binary() | string(), cert(), priv_key(),
 		 [revoke_option()]) -> state().
 init_state(issue, DirURL, Domains, AccKey, Opts) ->
     State = #state{command = issue,
 		   dir_url = check_url(DirURL),
-		   domains = lists:map(fun iolist_to_binary/1, Domains),
+		   domains = Domains,
 		   account = {AccKey, undefined},
 		   contact = [],
 		   cert_type = ec,
@@ -1007,11 +1011,11 @@ find_location(Hdrs) ->
 find_location(Hdrs, Default) ->
     proplists:get_value("location", Hdrs, Default).
 
--spec split_challenges([{binary(), acme_codec:challenge_obj()}, ...]) ->
-			      {Pending :: [{binary(), acme_codec:challenge_obj()}],
-			       InProgress :: [{binary(), acme_codec:challenge_obj()}],
-			       Valid :: [{binary(), acme_codec:challenge_obj()}],
-			       InValid ::[{binary(), acme_codec:challenge_obj()}]}.
+-spec split_challenges([{domain(), acme_codec:challenge_obj()}, ...]) ->
+			      {Pending :: [{domain(), acme_codec:challenge_obj()}],
+			       InProgress :: [{domain(), acme_codec:challenge_obj()}],
+			       Valid :: [{domain(), acme_codec:challenge_obj()}],
+			       InValid ::[{domain(), acme_codec:challenge_obj()}]}.
 split_challenges(Challenges) ->
     split_challenges(Challenges, [], [], [], []).
 
