@@ -158,7 +158,7 @@ format_error({http_error, Err}) ->
 	    {code, Code, ""} ->
 		"unexpected status code: " ++ integer_to_list(Code);
 	    {code, Code, Slogan} ->
-		format("~s (~B)", [Slogan, Code]);
+		format("~ts (~B)", [Slogan, Code]);
 	    {inet, Reason} ->
 		"transport failure: " ++ format_inet_error(Reason);
 	    {could_not_parse_as_http, _} ->
@@ -166,20 +166,18 @@ format_error({http_error, Err}) ->
 	    {missing_header, Header} ->
 		format("missing '~s' header", [Header]);
 	    {unexpected_content_type, Type} ->
-		format("unexpected content type: ~s", [Type]);
+		format("unexpected content type: ~ts", [Type]);
 	    _ ->
 		format("~p", [Err])
 	end;
 format_error({challenge_failed, Domain, undefined}) ->
-    format("Challenge failed for domain ~s",
-	   [unicode:characters_to_binary(Domain)]);
+    format("Challenge failed for domain ~ts", [Domain]);
 format_error({challenge_failed, Domain, ErrObj}) ->
-    format("Challenge failed for domain ~s: ~s",
-	   [unicode:characters_to_binary(Domain),
-	    format_problem_report(ErrObj)]);
+    format("Challenge failed for domain ~ts: ~ts",
+	   [Domain, format_problem_report(ErrObj)]);
 format_error({unsupported_challenges, Domain, Types}) ->
-    format("ACME server offered unsupported challenges for domain ~s: ~s",
-	   [unicode:characters_to_binary(Domain), string:join(Types, ", ")]);
+    format("ACME server offered unsupported challenges for domain ~ts: ~s",
+	   [Domain, string:join(Types, ", ")]);
 format_error({bad_pem, URL}) ->
     format("Failed to decode PEM certificate chain obtained from ~s", [URL]);
 format_error({bad_der, URL}) ->
@@ -227,7 +225,7 @@ format_inet_error(Reason) when is_atom(Reason) ->
 
 -spec format_problem_report(acme_codec:err_obj()) -> string().
 format_problem_report(#{type := Type, detail := Detail}) ->
-    format("ACME server reported: ~s (error type: ~s)", [Detail, Type]);
+    format("ACME server reported: ~ts (error type: ~s)", [Detail, Type]);
 format_problem_report(#{type := Type}) ->
     format("ACME server responded with ~s error", [Type]).
 
