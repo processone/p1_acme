@@ -94,6 +94,7 @@
 			{bad_pem, string()} |
 			{bad_der, string()} |
 			{bad_json, binary()} |
+			{idna_failed, binary()} |
 			{bad_cert, bad_cert_reason()} |
 			{problem_report, acme_codec:err_obj()}.
 -type error_return() :: {error, error_reason()}.
@@ -746,7 +747,7 @@ generate_csr([_|_] = Domains, PrivKey) ->
     DerParams = der_params(PrivKey),
     DerSAN = public_key:der_encode(
 	       'SubjectAltName',
-	       [{dNSName, binary_to_list(Domain)} || Domain <- Domains]),
+	       [{dNSName, idna:to_ascii(binary_to_list(Domain))} || Domain <- Domains]),
     Extns = [#'Extension'{extnID = ?'id-ce-subjectAltName',
 			  critical = false,
 			  extnValue = DerSAN}],
