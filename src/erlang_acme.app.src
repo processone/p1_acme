@@ -15,7 +15,7 @@
 %%% limitations under the License.
 %%%
 %%%-------------------------------------------------------------------
-{application, acme,
+{application, erlang_acme,
  [{description,  "ACME client"},
   {vsn,          "1.0.0"},
   {modules,      []},
