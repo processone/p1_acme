@@ -15,7 +15,7 @@
 %%% limitations under the License.
 %%%
 %%%-------------------------------------------------------------------
--module(acme).
+-module(p1_acme).
 
 %% API
 -export([start/0, stop/0]).
@@ -90,13 +90,13 @@
 			   empty_chain | key_mismatch.
 -type error_reason() :: {codec_error, yconf:error_reason(), yconf:ctx(), map()} |
 			{http_error, term()} |
-			{challenge_failed, domain(), undefined | acme_codec:err_obj()} |
+			{challenge_failed, domain(), undefined | p1_acme_codec:err_obj()} |
 			{unsupported_challenges, domain(), [string()]} |
 			{bad_pem, string()} |
 			{bad_der, string()} |
 			{bad_json, binary()} |
 			{bad_cert, bad_cert_reason()} |
-			{problem_report, acme_codec:err_obj()}.
+			{problem_report, p1_acme_codec:err_obj()}.
 -type error_return() :: {error, error_reason()}.
 -type issue_return() :: {ok, #{acc_key := priv_key(),
 			       cert_key := priv_key(),
@@ -223,7 +223,7 @@ format_inet_error(Reason) when is_atom(Reason) ->
         Txt -> Txt
     end.
 
--spec format_problem_report(acme_codec:err_obj()) -> string().
+-spec format_problem_report(p1_acme_codec:err_obj()) -> string().
 format_problem_report(#{type := Type, detail := Detail}) ->
     format("ACME server reported: ~ts (error type: ~s)", [Detail, Type]);
 format_problem_report(#{type := Type}) ->
@@ -299,14 +299,14 @@ request_new_order(State) ->
     end.
 
 -spec request_domain_auth(state(), [string()]) ->
-				 {ok, state(), [{domain(), acme_codec:challenge_obj()}]} |
+				 {ok, state(), [{domain(), p1_acme_codec:challenge_obj()}]} |
 				 error_return().
 request_domain_auth(State, AuthURLs) ->
     request_domain_auth(State, AuthURLs, []).
 
 -spec request_domain_auth(state(), [string()],
-			  [{domain(), acme_codec:challenge_obj()}]) ->
-				 {ok, state(), [{domain(), acme_codec:challenge_obj()}]} |
+			  [{domain(), p1_acme_codec:challenge_obj()}]) ->
+				 {ok, state(), [{domain(), p1_acme_codec:challenge_obj()}]} |
 				 error_return().
 request_domain_auth(State, [URL|URLs], Challenges) ->
     Req = fun(S) ->
@@ -327,7 +327,7 @@ request_domain_auth(State, [URL|URLs], Challenges) ->
 request_domain_auth(State, [], Challenges) ->
     {ok, State, Challenges}.
 
--spec request_challenges(state(), [{domain(), acme_codec:challenge_obj()}]) -> issue_return().
+-spec request_challenges(state(), [{domain(), p1_acme_codec:challenge_obj()}]) -> issue_return().
 request_challenges(State, Challenges) ->
     {Pending, _InProgress, _Valid, Invalid} = split_challenges(Challenges),
     case Invalid of
@@ -358,7 +358,7 @@ request_challenges(State, Challenges) ->
 	    end
     end.
 
--spec request_challenge(state(), acme_codec:challenge_obj()) -> state() | error_return().
+-spec request_challenge(state(), p1_acme_codec:challenge_obj()) -> state() | error_return().
 request_challenge(State, #{url := URL0}) ->
     URL = binary_to_list(URL0),
     Req = fun(S) ->
@@ -440,7 +440,7 @@ poll(#state{order_url = URL} = State, Timeout) ->
 %%%===================================================================
 -spec handle_directory_response(http_json(), state()) -> acme_return().
 handle_directory_response({_, _Hdrs, JSON}, State) ->
-    case acme_codec:decode_dir_obj(JSON) of
+    case p1_acme_codec:decode_dir_obj(JSON) of
 	{ok, #{newNonce := NonceURL,
 	       newAccount := AccURL,
 	       newOrder := OrderURL,
@@ -473,7 +473,7 @@ handle_account_response({_, Hdrs, JSON}, State) ->
 	undefined ->
 	    mk_http_error({missing_header, 'Location'});
 	AccURL ->
-	    case acme_codec:decode_acc_obj(JSON) of
+	    case p1_acme_codec:decode_acc_obj(JSON) of
 		{ok, _} ->
 		    {AccKey, _} = State#state.account,
 		    State1 = State#state{account = {AccKey, AccURL}},
@@ -489,7 +489,7 @@ handle_order_response({_, Hdrs, JSON}, State) ->
 	undefined ->
 	    mk_http_error({missing_header, 'Location'});
 	OrderURL ->
-	    case acme_codec:decode_order_obj(JSON) of
+	    case p1_acme_codec:decode_order_obj(JSON) of
 		{ok, #{status := ready,
 		       finalize := FinURL}} ->
 		    request_certificate(State, binary_to_list(FinURL));
@@ -511,10 +511,10 @@ handle_order_response({_, Hdrs, JSON}, State) ->
     end.
 
 -spec handle_domain_auth_response(http_json(), state()) ->
-					 {ok, {domain(), acme_codec:challenge_obj()}} |
+					 {ok, {domain(), p1_acme_codec:challenge_obj()}} |
 					 error_return().
 handle_domain_auth_response({_, _Hdrs, JSON}, State) ->
-    case acme_codec:decode_auth_obj(JSON) of
+    case p1_acme_codec:decode_auth_obj(JSON) of
 	{ok, #{challenges := Challenges,
 	       identifier := #{value := D}}} ->
 	    Domain = idna:to_unicode(binary_to_list(D)),
@@ -534,7 +534,7 @@ handle_domain_auth_response({_, _Hdrs, JSON}, State) ->
 
 -spec handle_poll_response(http_json(), state(), non_neg_integer()) -> issue_return().
 handle_poll_response({_, _, JSON} = Response, State, Timeout) ->
-    case acme_codec:decode_order_obj(JSON) of
+    case p1_acme_codec:decode_order_obj(JSON) of
 	{ok, #{status := Status}} when Status == pending;
 				       Status == processing ->
 	    Timeout1 = min(Timeout, get_timeout(State)),
@@ -670,7 +670,7 @@ handle_http_response(ReqFun, {{_, Code, Slogan}, Hdrs, Body}, State, RetryTimeou
 		JSON when Type == "application/json" ->
 		    {ok, {Code, Hdrs, JSON}, State1};
 		JSON when Type == "application/problem+json" ->
-		    case acme_codec:decode_err_obj(JSON) of
+		    case p1_acme_codec:decode_err_obj(JSON) of
 			{ok, ErrObj} ->
 			    http_retry(State1, ReqFun, RetryTimeout,
 				       {problem_report, ErrObj});
@@ -1009,11 +1009,11 @@ find_location(Hdrs) ->
 find_location(Hdrs, Default) ->
     proplists:get_value("location", Hdrs, Default).
 
--spec split_challenges([{domain(), acme_codec:challenge_obj()}, ...]) ->
-			      {Pending :: [{domain(), acme_codec:challenge_obj()}],
-			       InProgress :: [{domain(), acme_codec:challenge_obj()}],
-			       Valid :: [{domain(), acme_codec:challenge_obj()}],
-			       InValid ::[{domain(), acme_codec:challenge_obj()}]}.
+-spec split_challenges([{domain(), p1_acme_codec:challenge_obj()}, ...]) ->
+			      {Pending :: [{domain(), p1_acme_codec:challenge_obj()}],
+			       InProgress :: [{domain(), p1_acme_codec:challenge_obj()}],
+			       Valid :: [{domain(), p1_acme_codec:challenge_obj()}],
+			       InValid ::[{domain(), p1_acme_codec:challenge_obj()}]}.
 split_challenges(Challenges) ->
     split_challenges(Challenges, [], [], [], []).
 

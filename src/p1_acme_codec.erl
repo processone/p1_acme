@@ -15,7 +15,7 @@
 %%% limitations under the License.
 %%%
 %%%-------------------------------------------------------------------
--module(acme_codec).
+-module(p1_acme_codec).
 
 %% API
 -export([decode_dir_obj/1]).

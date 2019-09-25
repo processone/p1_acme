@@ -41,10 +41,10 @@ dialyzer/deps.plt:
 	-o dialyzer/deps.log $(deps); \
 	status=$$? ; if [ $$status -ne 2 ]; then exit $$status; else exit 0; fi
 
-dialyzer/acme.plt:
+dialyzer/p1_acme.plt:
 	@mkdir -p dialyzer
-	@dialyzer --build_plt --output_plt dialyzer/acme.plt \
-	-o dialyzer/acme.log ebin; \
+	@dialyzer --build_plt --output_plt dialyzer/p1_acme.plt \
+	-o dialyzer/p1_acme.log ebin; \
 	status=$$? ; if [ $$status -ne 2 ]; then exit $$status; else exit 0; fi
 
 erlang_plt: dialyzer/erlang.plt
@@ -55,11 +55,11 @@ deps_plt: dialyzer/deps.plt
 	@dialyzer --plt dialyzer/deps.plt --check_plt -o dialyzer/deps.log; \
 	status=$$? ; if [ $$status -ne 2 ]; then exit $$status; else exit 0; fi
 
-acme_plt: dialyzer/acme.plt
-	@dialyzer --plt dialyzer/acme.plt --check_plt -o dialyzer/acme.log; \
+p1_acme_plt: dialyzer/p1_acme.plt
+	@dialyzer --plt dialyzer/p1_acme.plt --check_plt -o dialyzer/p1_acme.log; \
 	status=$$? ; if [ $$status -ne 2 ]; then exit $$status; else exit 0; fi
 
-dialyzer: erlang_plt deps_plt acme_plt
+dialyzer: erlang_plt deps_plt p1_acme_plt
 	@dialyzer --plts dialyzer/*.plt --no_check_plt \
 	--get_warnings -Wunmatched_returns -o dialyzer/error.log ebin; \
 	status=$$? ; if [ $$status -ne 2 ]; then exit $$status; else exit 0; fi
@@ -67,4 +67,4 @@ dialyzer: erlang_plt deps_plt acme_plt
 check-syntax:
 	gcc -o nul -S ${CHK_SOURCES}
 
-.PHONY: clean src test all dialyzer erlang_plt deps_plt acme_plt
+.PHONY: clean src test all dialyzer erlang_plt deps_plt p1_acme_plt
