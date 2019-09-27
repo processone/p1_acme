@@ -113,13 +113,13 @@
 %%% API
 %%%===================================================================
 start() ->
-    case application:ensure_all_started(acme) of
+    case application:ensure_all_started(?MODULE) of
 	{ok, _} -> ok;
 	Err -> Err
     end.
 
 stop() ->
-    application:stop(acme).
+    application:stop(?MODULE).
 
 -spec issue(binary() | string(), [domain()]) -> issue_return().
 issue(DirURL, Domains) ->
