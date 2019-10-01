@@ -1,3 +1,7 @@
+# Version 1.0.2
+
+* Use jose 1.9.0
+
 # Version 1.0.1
 
 * Rename to p1\_acme since old name collided with existing packet on
