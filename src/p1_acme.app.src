@@ -17,7 +17,7 @@
 %%%-------------------------------------------------------------------
 {application, p1_acme,
  [{description,  "ACME client"},
-  {vsn,          "1.0.2"},
+  {vsn,          "1.0.3"},
   {modules,      []},
   {registered,   []},
   {applications, [kernel, stdlib, fast_yaml,

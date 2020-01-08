@@ -1,3 +1,7 @@
+# Version 1.0.3
+
+* Updating yconf to version 071c0ba.
+
 # Version 1.0.2
 
 * Use jose 1.9.0
