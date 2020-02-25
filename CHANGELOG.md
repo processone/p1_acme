@@ -1,5 +1,6 @@
 # Version 1.0.4
 
+* Updating yconf to version 1.0.3.
 * Update copyright year
 * Update yconf
 
