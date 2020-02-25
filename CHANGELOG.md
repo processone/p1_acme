@@ -1,3 +1,8 @@
+# Version 1.0.4
+
+* Update copyright year
+* Update yconf
+
 # Version 1.0.3
 
 * Updating yconf to version 071c0ba.
