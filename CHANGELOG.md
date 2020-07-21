@@ -1,3 +1,9 @@
+# Version 1.0.7
+
+* Added Travis configuration with support for Erlang/OTP 23.0
+* Updating jiffy to version 1.0.5.
+* Updating yconf to version 1.0.6.
+
 # Version 1.0.6
 
 * Updating yconf to version 1.0.5.
