@@ -1,3 +1,7 @@
+# Version 1.0.8
+
+* Updating yconf to version 1.0.7.
+
 # Version 1.0.7
 
 * Added Travis configuration with support for Erlang/OTP 23.0
