@@ -1,3 +1,7 @@
+# Version 1.0.9
+
+* Updating yconf to version 1.0.8.
+
 # Version 1.0.8
 
 * Updating yconf to version 1.0.7.
