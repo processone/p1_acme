@@ -20,8 +20,8 @@
   {vsn,          "1.0.10"},
   {modules,      []},
   {registered,   []},
-  {applications, [kernel, stdlib, fast_yaml,
-		  yconf, crypto, ssl, public_key, inets]},
+  {applications, [crypto, inets, kernel, public_key, ssl, stdlib,
+                  idna, jiffy, jose, yconf]},
   {env,          []},
 
   %% hex.pm packaging:
