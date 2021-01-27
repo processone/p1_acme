@@ -1,3 +1,7 @@
+# Version 1.0.11
+
+* Add missing applicaitons to p1_acme.app
+
 # Version 1.0.10
 
 * Updating yconf to version 1.0.9.
