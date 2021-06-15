@@ -1,9 +1,12 @@
-REBAR=./rebar
+REBAR ?= ./rebar
+
+IS_REBAR3:=$(shell expr `$(REBAR) --version | awk -F '[ .]' '/rebar / {print $$2}'` '>=' 3)
 
 all: src
 
 src:
-	$(REBAR) get-deps compile
+	$(REBAR) get-deps
+	$(REBAR) compile
 
 clean:
 	$(REBAR) clean
@@ -12,20 +15,24 @@ distclean: clean
 	rm -f config.status
 	rm -f config.log
 	rm -rf autom4te.cache
+	rm -rf _build
 	rm -rf deps
 	rm -rf ebin
+	rm -f rebar.lock
+	rm -f test/*.beam
 	rm -rf priv
 	rm -f vars.config
 	rm -f erl_crash.dump
 	rm -f compile_commands.json
 	rm -rf dialyzer
 
-test: all
-	$(REBAR) -v skip_deps=true eunit
-
 xref: all
-	$(REBAR) skip_deps=true xref
+	$(REBAR) xref
 
+ifeq "$(IS_REBAR3)" "1"
+dialyzer:
+	$(REBAR) dialyzer
+else
 deps := $(wildcard deps/*/ebin)
 
 dialyzer/erlang.plt:
@@ -63,8 +70,9 @@ dialyzer: erlang_plt deps_plt p1_acme_plt
 	@dialyzer --plts dialyzer/*.plt --no_check_plt \
 	--get_warnings -Wunmatched_returns -o dialyzer/error.log ebin; \
 	status=$$? ; if [ $$status -ne 2 ]; then exit $$status; else exit 0; fi
+endif
 
 check-syntax:
 	gcc -o nul -S ${CHK_SOURCES}
 
-.PHONY: clean src test all dialyzer erlang_plt deps_plt p1_acme_plt
+.PHONY: clean src xref all dialyzer erlang_plt deps_plt p1_acme_plt
