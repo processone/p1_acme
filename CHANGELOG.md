@@ -1,5 +1,6 @@
 # Version 1.0.13
 
+* Updating yconf to version 1.0.12.
 * Switch from using Travis to Github Actions as CI
 
 # Version 1.0.12
