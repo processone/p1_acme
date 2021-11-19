@@ -1,3 +1,7 @@
+# Version 1.0.14
+
+* Updating jose to version 1.11.1.
+
 # Version 1.0.13
 
 * Updating yconf to version 1.0.12.
