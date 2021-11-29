@@ -1,5 +1,6 @@
-Erlang ACME client (RFC8555)
-============================
+# Erlang ACME client (RFC8555)
+
+This is implementation of ACME v1 protocol in ERlang language
 
 [![CI](https://github.com/processone/p1_acme/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/processone/p1_acme/actions/workflows/ci.yml)
 [![Coverage Status](https://coveralls.io/repos/processone/p1_acme/badge.svg?branch=master&service=github)](https://coveralls.io/github/processone/p1_acme?branch=master)
