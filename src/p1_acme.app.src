@@ -17,7 +17,7 @@
 %%%-------------------------------------------------------------------
 {application, p1_acme,
  [{description,  "ACME client"},
-  {vsn,          "1.0.13"},
+  {vsn,          "1.0.14"},
   {modules,      []},
   {registered,   []},
   {applications, [crypto, inets, kernel, public_key, ssl, stdlib,
