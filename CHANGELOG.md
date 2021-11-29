@@ -1,5 +1,6 @@
 # Version 1.0.14
 
+* Generate documentation when publishing to hex
 * Updating jose to version 1.11.1.
 
 # Version 1.0.13
