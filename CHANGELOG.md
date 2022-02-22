@@ -1,3 +1,8 @@
+# Version 1.0.17
+
+* Updating jiffy to version 1.1.0.
+* Copy code from eimp to use override_deps_versions only when not rebar3
+
 # Version 1.0.14
 
 * Generate documentation when publishing to hex
