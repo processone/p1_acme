@@ -1,6 +1,10 @@
+# Version 1.0.18
+
+* Updating jiffy to version 1.1.1 to support Mix compilation again
+
 # Version 1.0.17
 
-* Updating jiffy to version 1.1.0.
+* Updating jiffy to version 1.1.0 to support Erlang/OTP 25.0-rc1
 * Copy code from eimp to use override_deps_versions only when not rebar3
 
 # Version 1.0.14
