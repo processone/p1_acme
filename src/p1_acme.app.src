@@ -20,7 +20,8 @@
   {vsn,          "1.0.18"},
   {modules,      []},
   {registered,   []},
-  {applications, [crypto, inets, kernel, public_key, ssl, stdlib,
+  {applications, [kernel, stdlib,
+                  crypto, inets, public_key, ssl,
                   idna, jiffy, jose, yconf]},
   {env,          []},
 
