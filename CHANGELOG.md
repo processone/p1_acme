@@ -1,3 +1,7 @@
+# Version 1.0.19
+
+* Fix order in which dependencies are started
+
 # Version 1.0.18
 
 * Updating jiffy to version 1.1.1 to support Mix compilation again
