@@ -1,5 +1,6 @@
 # Version 1.0.19
 
+* Updating yconf to version 1.0.13.
 * Fix order in which dependencies are started
 
 # Version 1.0.18
