@@ -1,5 +1,6 @@
 # Version 1.0.21
 
+* Updating yconf to version 1.0.15.
 * Updating jose to version 1.11.5.
 
 # Version 1.0.20
