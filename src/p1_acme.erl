@@ -113,6 +113,9 @@
 %%% API
 %%%===================================================================
 start() ->
+    application:start(inets),
+    inets:start(httpc, [{profile, ?MODULE}]),
+    httpc:set_options([{ipfamily, inet6fb4}], ?MODULE),
     case application:ensure_all_started(?MODULE) of
 	{ok, _} -> ok;
 	Err -> Err
@@ -602,7 +605,7 @@ http_request(State, ReqFun, RetryTimeout) ->
 			       [{timeout, infinity},
 				{connect_timeout, infinity}],
 			       [{body_format, binary},
-				{sync, false}]) of
+				{sync, false}], ?MODULE) of
 		{ok, Ref} ->
 		    ReqTimeout = min(timer:seconds(10), Timeout),
 		    receive
@@ -612,7 +615,7 @@ http_request(State, ReqFun, RetryTimeout) ->
 			      ReqFun, Response, State, RetryTimeout)
 		    after ReqTimeout ->
 			    ?DEBUG("HTTP request timeout", []),
-			    httpc:cancel_request(Ref),
+			    httpc:cancel_request(Ref, ?MODULE),
 			    http_request(State, ReqFun, RetryTimeout)
 		    end;
 		{error, WTF} ->
