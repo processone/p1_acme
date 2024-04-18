@@ -16,9 +16,9 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - run: make
-      if: matrix.otp != 25
+      if: matrix.otp >= 24
     - run: REBAR=rebar make
-      if: matrix.otp == 25
+      if: matrix.otp < 24
     - run: rebar3 compile
     - run: rebar3 xref
     - run: rebar3 dialyzer
