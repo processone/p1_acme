@@ -25,6 +25,9 @@
 -export([generate_csr/2]).
 -export([format_error/1]).
 
+%% OTP Application API
+-export([start/2]).
+
 -include_lib("public_key/include/public_key.hrl").
 
 -define(DER_NULL, <<5, 0>>).
@@ -110,12 +113,21 @@
 -export_type([error_reason/0, issue_return/0, revoke_return/0, challenge_data/0]).
 
 %%%===================================================================
-%%% API
+%%% OTP Application API
 %%%===================================================================
-start() ->
+
+start(_StartType, _StartArgs) ->
     application:start(inets),
     inets:start(httpc, [{profile, ?MODULE}]),
     httpc:set_options([{ipfamily, inet6fb4}], ?MODULE),
+    {ok, self()}.
+
+%%%===================================================================
+%%% API
+%%%===================================================================
+
+start() ->
+    start(normal, []),
     case application:ensure_all_started(?MODULE) of
 	{ok, _} -> ok;
 	Err -> Err
