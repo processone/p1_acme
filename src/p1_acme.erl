@@ -681,7 +681,7 @@ handle_http_response(ReqFun, {{_, Code, Slogan}, Hdrs, Body}, State, RetryTimeou
 	{_, Type} when Type == "application/problem+json";
 		       Type == "application/json" ->
 	    State1 = update_nonce(Hdrs, State),
-	    try jiffy:decode(Body, [return_maps]) of
+	    try json_decode(Body) of
 		JSON when Type == "application/json" ->
 		    {ok, {Code, Hdrs, JSON}, State1};
 		JSON when Type == "application/problem+json" ->
@@ -913,7 +913,7 @@ jose_json(#state{account = {Key, AccURL}, nonce = Nonce} = State, Data, URL) ->
     JwsMap = case AccURL of
 		 undefined ->
 		     {_, BinaryPubKey} = jose_jwk:to_binary(PubKey),
-		     PubKeyJson = jiffy:decode(BinaryPubKey),
+		     PubKeyJson = json_decode(BinaryPubKey),
 		     JwsMap0#{<<"jwk">> => PubKeyJson};
 		 _ ->
 		     JwsMap0#{<<"kid">> => iolist_to_binary(AccURL)}
@@ -930,7 +930,19 @@ auth_key(#state{account = {PrivKey, _}}, Token) ->
 
 -spec encode_json(map()) -> binary().
 encode_json(JSON) ->
-    iolist_to_binary(jiffy:encode(JSON)).
+    json_encode(JSON).
+
+-ifdef(OTP_BELOW_27).
+json_encode(Term) ->
+    iolist_to_binary(jiffy:encode(Term)).
+json_decode(Bin) ->
+    jiffy:decode(Bin).
+-else.
+json_encode(Term) ->
+    iolist_to_binary(json:encode(Term)).
+json_decode(Bin) ->
+    json:decode(Bin).
+-endif.
 
 %%%===================================================================
 %%% Misc
