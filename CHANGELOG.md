@@ -1,3 +1,7 @@
+# Version 1.0.23
+
+* Make compatible with OTP27
+
 # Version 1.0.21
 
 * Updating yconf to version 1.0.15.
@@ -90,4 +94,3 @@
 
 * Updating yconf to version 1.0.1.
 * Initial version
-
