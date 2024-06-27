@@ -15,12 +15,6 @@
 %%% limitations under the License.
 %%%
 %%%-------------------------------------------------------------------
-
-Applications = case erlang:list_to_integer(erlang:system_info(otp_release))<27 of
-                   true -> [jiffy];
-                   false -> []
-               end,
-
 {application, p1_acme,
  [{description,  "ACME client"},
   {vsn,          "1.0.22"},
@@ -28,7 +22,7 @@ Applications = case erlang:list_to_integer(erlang:system_info(otp_release))<27 o
   {registered,   []},
   {applications, [kernel, stdlib,
                   crypto, inets, public_key, ssl,
-                  base64url, idna, jose, yconf | Applications]},
+                  base64url, idna, jose, yconf]},
   {env,          []},
   {mod,          {p1_acme, []}},
 
