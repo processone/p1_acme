@@ -22,7 +22,7 @@
   {registered,   []},
   {applications, [kernel, stdlib,
                   crypto, inets, public_key, ssl,
-                  base64url, idna, jose, yconf]},
+                  base64url, idna, jiffy, jose, yconf]},
   {env,          []},
   {mod,          {p1_acme, []}},
 
