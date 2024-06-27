@@ -16,7 +16,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - run: make
-      if: matrix.otp >= 24
+      if: matrix.otp >= 24 && matrix.otp < 27
     - run: REBAR=rebar make
       if: matrix.otp < 24
     - run: rebar3 compile
