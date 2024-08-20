@@ -937,15 +937,11 @@ json_encode(Term) ->
     iolist_to_binary(jiffy:encode(Term)).
 json_decode_maps(Bin) ->
     jiffy:decode(Bin, [return_maps]).
-json_decode_list(Bin) ->
-    jiffy:decode(Bin).
 -else.
 json_encode(Term) ->
     iolist_to_binary(json:encode(Term)).
 json_decode_maps(Bin) ->
     json:decode(Bin).
-json_decode_list(Bin) ->
-    maps:to_list(json:decode(Bin)).
 -endif.
 
 %%%===================================================================
