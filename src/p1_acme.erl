@@ -913,7 +913,7 @@ jose_json(#state{account = {Key, AccURL}, nonce = Nonce} = State, Data, URL) ->
     JwsMap = case AccURL of
 		 undefined ->
 		     {_, BinaryPubKey} = jose_jwk:to_binary(PubKey),
-		     PubKeyJson = json_decode_list(BinaryPubKey),
+		     PubKeyJson = json_decode_maps(BinaryPubKey),
 		     JwsMap0#{<<"jwk">> => PubKeyJson};
 		 _ ->
 		     JwsMap0#{<<"kid">> => iolist_to_binary(AccURL)}
