@@ -1,3 +1,7 @@
+# Version 1.0.25
+
+* Updating yconf to version 1.0.17.
+
 # Version 1.0.24
 
 * Fix issues with jwk and recent jiffy
