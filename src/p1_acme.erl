@@ -756,6 +756,11 @@ generate_key(ec) ->
 generate_key(rsa) ->
     public_key:generate_key({rsa, 2048, 65537}).
 
+%% OTP-28.0-rc4 in commit b230e26c4f6530563919b19e76f2d2e96e436048
+%% removed in the file lib/public_key/asn1/PKCS-10.asn1
+%% several definitions. Let's add manually the macro here:
+-define('p1_acme-pkcs-9-at-extensionRequest', {1,2,840,113549,1,9,14}).
+
 -spec generate_csr([domain(), ...], priv_key()) -> #'CertificationRequest'{}.
 generate_csr([_|_] = Domains, PrivKey) ->
     SignAlgoOID = signature_algorithm(PrivKey),
@@ -769,7 +774,7 @@ generate_csr([_|_] = Domains, PrivKey) ->
 			  critical = false,
 			  extnValue = DerSAN}],
     DerExtnReq = public_key:der_encode('ExtensionRequest', Extns),
-    Attribute = #'AttributePKCS-10'{type = ?'pkcs-9-at-extensionRequest',
+    Attribute = #'AttributePKCS-10'{type = ?'p1_acme-pkcs-9-at-extensionRequest',
 				    values = [{asn1_OPENTYPE, DerExtnReq}]},
     SubjPKInfo = #'CertificationRequestInfo_subjectPKInfo'{
 		    subjectPublicKey = subject_pubkey(PubKey),
