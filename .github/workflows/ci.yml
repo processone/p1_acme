@@ -24,7 +24,7 @@ jobs:
     - run: rebar3 dialyzer
     - run: rebar3 eunit -v
     - name: Send to Coveralls
-      if: matrix.otp == 24
+      if: matrix.otp == 27
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
