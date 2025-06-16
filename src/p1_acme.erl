@@ -905,7 +905,7 @@ find_issuer_cert(_Cert, []) ->
 jose_json(State, JSON, URL) when is_map(JSON) ->
     jose_json(State, encode_json(JSON), URL);
 jose_json(#state{account = {Key, AccURL}, nonce = Nonce} = State, Data, URL) ->
-    PrivKey = jose_jwk:from_key(Key),
+    PrivKey = jose_jwk:from_key(convert_key_version_jose(Key)),
     PubKey = jose_jwk:to_public(PrivKey),
     AlgMap = case jose_jwk:signer(PrivKey) of
 		 M when is_record(Key, 'RSAPrivateKey') ->
@@ -930,7 +930,7 @@ jose_json(#state{account = {Key, AccURL}, nonce = Nonce} = State, Data, URL) ->
 
 -spec auth_key(state(), binary()) -> binary().
 auth_key(#state{account = {PrivKey, _}}, Token) ->
-    Thumbprint = jose_jwk:thumbprint(jose_jwk:from_key(PrivKey)),
+    Thumbprint = jose_jwk:thumbprint(jose_jwk:from_key(convert_key_version_jose(PrivKey))),
     <<Token/binary, $., Thumbprint/binary>>.
 
 -spec encode_json(map()) -> binary().
@@ -948,6 +948,12 @@ json_encode(Term) ->
 json_decode_maps(Bin) ->
     json:decode(Bin).
 -endif.
+
+%% Erlang/OTP 28 generates this, but Jose 1.11.10 doesn't support it
+convert_key_version_jose(#'ECPrivateKey'{version = ecPrivkeyVer1} = Key) ->
+    Key#'ECPrivateKey'{version = 1};
+convert_key_version_jose(Key) ->
+    Key.
 
 %%%===================================================================
 %%% Misc
