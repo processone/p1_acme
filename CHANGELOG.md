@@ -1,5 +1,6 @@
 # Version 1.0.27
 
+* Updating yconf to version 1.0.20.
 * Fix compilation with Erlang 28
 
 # Version 1.0.26
