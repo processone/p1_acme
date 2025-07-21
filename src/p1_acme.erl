@@ -769,7 +769,7 @@ generate_csr([_|_] = Domains, PrivKey) ->
 			  critical = false,
 			  extnValue = DerSAN}],
     DerExtnReq = public_key:der_encode('ExtensionRequest', Extns),
-    Attribute = #'AttributePKCS-10'{type = ?'pkcs-9-at-extensionRequest',
+    Attribute = #'Attribute'{type = ?'pkcs-9-at-extensionRequest',
 				    values = [{asn1_OPENTYPE, DerExtnReq}]},
     SubjPKInfo = #'CertificationRequestInfo_subjectPKInfo'{
 		    subjectPublicKey = subject_pubkey(PubKey),
