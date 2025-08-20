@@ -1,5 +1,6 @@
 # Version 1.0.28
 
+* Updating yconf to version 1.0.21.
 * Fix issues with OTP28
 
 # Version 1.0.27
