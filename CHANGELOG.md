@@ -1,3 +1,7 @@
+# Version 1.0.29
+
+* Updating yconf to version 95692795a8a8d950ba560e5b07e6b80660557259.
+
 # Version 1.0.28
 
 * Updating yconf to version 1.0.21.
