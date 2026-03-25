@@ -390,7 +390,7 @@ request_challenge(State, #{url := URL0}) ->
 -spec request_certificate(state(), string()) -> issue_return().
 request_certificate(State, URL) ->
     {DerCSR, State1} = generate_csr(State),
-    Body = #{<<"csr">> => base64url:encode(DerCSR)},
+    Body = #{<<"csr">> => base64url_encode(DerCSR)},
     Req = fun(S) ->
 		  JoseJSON = jose_json(S, Body, URL),
 		  {post, {URL, [], "application/jose+json", JoseJSON}}
@@ -407,7 +407,7 @@ revoke_certificate(#state{revoke_url = URL,
 			  cert_key = CertKey,
 			  cert = Cert} = State) ->
     DerCert = public_key:pkix_encode('OTPCertificate', Cert, otp),
-    Body = #{<<"certificate">> => base64url:encode(DerCert)},
+    Body = #{<<"certificate">> => base64url_encode(DerCert)},
     State1 = State#state{account = {CertKey, undefined}},
     Req = fun(S) ->
 		  JoseJSON = jose_json(S, Body, URL),
@@ -1059,3 +1059,6 @@ split_challenges([{_, Challenge} = C|Cs], Pending, InProgress, Valid, Invalid) -
     end;
 split_challenges([], Pending, InProgress, Valid, Invalid) ->
     {Pending, InProgress, Valid, Invalid}.
+
+base64url_encode(String) ->
+    unicode:characters_to_binary(jose_base64url:encode(String)).
