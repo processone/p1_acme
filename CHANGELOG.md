@@ -1,3 +1,8 @@
+# Version 1.0.31
+
+* Update idna to version 7.1
+* Remove jiffy dependency for <R27
+
 # Version 1.0.30
 
 * Updating yconf to version 1.0.22.
